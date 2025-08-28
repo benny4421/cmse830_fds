@@ -1,2 +1,5 @@
 # cmse830_fds
-A repo for MSDS_cmse830
+
+This repository is for **CMSE 830** as part of the **MSU Master of Science in Data Science (MSDS) program**.  
+It contains coursework, assignments, and related materials for the class.
+
