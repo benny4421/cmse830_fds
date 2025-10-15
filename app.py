@@ -1,48 +1,72 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+import io, requests
 
 st.set_page_config(page_title="EMS Crash Injury Disparities", page_icon="🚑", layout="wide")
 
 # ----------------------------
-# Data Loader
+# Data Loader (Google Drive + Uploader)  ← 단일화
 # ----------------------------
-@st.cache_data(show_spinner=False)
-def load_data(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv(csv_path, low_memory=False)
-    # dtype 정리
+@st.cache_data(show_spinner=True)
+def postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if 'Year' in df.columns:
-        # 연도 float → int → str 로도 활용 가능하지만, 여기선 int 보장
         df['Year'] = pd.to_numeric(df['Year'], errors='coerce').astype('Int64')
-    # 표준 카테고리 정렬(있을 때만)
     if 'AgeGroup' in df.columns:
-        age_order = ['0-24','25-34','35-44','45-54','55-64','65-74','75-84','85+']
-        df['AgeGroup'] = pd.Categorical(df['AgeGroup'], categories=age_order, ordered=True)
+        order = ['0-24','25-34','35-44','45-54','55-64','65-74','75-84','85+']
+        df['AgeGroup'] = pd.Categorical(df['AgeGroup'], categories=order, ordered=True)
     return df
 
-# ----------------------------
-# Sidebar: 데이터 소스 선택
-# ----------------------------
+@st.cache_data(show_spinner=True)
+def load_drive_csv(drive_link: str) -> pd.DataFrame:
+    # 공유 링크/직접 링크 모두 허용
+    file_id = None
+    if "id=" in drive_link:
+        file_id = drive_link.split("id=")[-1]
+    elif "/d/" in drive_link:
+        file_id = drive_link.split("/d/")[1].split("/")[0]
+    else:
+        raise ValueError("Invalid Google Drive link format.")
+    direct_url = f"https://drive.google.com/uc?id={file_id}"
+
+    r = requests.get(direct_url, stream=True, timeout=120)
+    r.raise_for_status()
+    df = pd.read_csv(io.BytesIO(r.content), low_memory=False)
+    return postprocess(df)
+
 st.sidebar.header("📂 Data Source")
-default_path = "/content/ems_merged_clean.csv"
-csv_path = st.sidebar.text_input("CSV path", value=default_path, help="코랩에서 저장한 CSV 경로를 입력하세요.")
-uploaded = st.sidebar.file_uploader("...또는 파일 업로드", type=["csv"])
-if uploaded is not None:
-    df = load_data(uploaded)
-else:
-    df = load_data(csv_path)
+# 1) 파일 업로드(소용량) + 2) 구글드라이브 링크(대용량) 지원
+uploaded = st.sidebar.file_uploader("Upload CSV (≤~200MB)", type=["csv"])
+drive_default = "https://drive.google.com/file/d/1XQfuB-XnwmgfiUy2miouQqkyPsP7yrWF/view?usp=sharing"
+drive_link = st.sidebar.text_input("Or paste Google Drive link", value=drive_default)
 
-# 공통 필터 위젯 (여러 페이지에서 재사용)
+try:
+    if uploaded is not None:
+        df = postprocess(pd.read_csv(uploaded, low_memory=False))
+        st.sidebar.success(f"✅ Uploaded: {len(df):,} rows")
+    else:
+        df = load_drive_csv(drive_link)
+        st.sidebar.success(f"✅ Loaded from Drive: {len(df):,} rows")
+except Exception as e:
+    st.sidebar.error(f"데이터 로드 실패: {e}")
+    st.stop()
+
+# ----------------------------
+# Filters
+# ----------------------------
 st.sidebar.header("🔎 Filters")
-# 존재 여부 체크 후 동적 필터 생성
-def get_vals(col):
-    return sorted([v for v in df[col].dropna().unique().tolist()]) if col in df.columns else []
 
-years = get_vals('Year')
-divisions = get_vals('USCensusDivision')
-races = get_vals('Race')
-genders = get_vals('Gender')
-agegroups = get_vals('AgeGroup')
+def get_vals(col):
+    return sorted(df[col].dropna().unique().tolist()) if col in df.columns else []
+
+years      = get_vals('Year')
+divisions  = get_vals('USCensusDivision')
+races      = get_vals('Race')
+genders    = get_vals('Gender')
+agegroups  = get_vals('AgeGroup')
 urbanicity = get_vals('Urbanicity')
 
 year_sel = st.sidebar.multiselect("Year", years, default=years)
@@ -53,16 +77,22 @@ age_sel  = st.sidebar.multiselect("Age Group", agegroups, default=agegroups)
 urb_sel  = st.sidebar.multiselect("Urbanicity", urbanicity, default=urbanicity)
 
 def apply_filters(data: pd.DataFrame) -> pd.DataFrame:
-    out = data.copy()
-    if 'Year' in out and len(year_sel)>0: out = out[out['Year'].isin(year_sel)]
-    if 'USCensusDivision' in out and len(div_sel)>0: out = out[out['USCensusDivision'].isin(div_sel)]
-    if 'Race' in out and len(race_sel)>0: out = out[out['Race'].isin(race_sel)]
-    if 'Gender' in out and len(gen_sel)>0: out = out[out['Gender'].isin(gen_sel)]
-    if 'AgeGroup' in out and len(age_sel)>0: out = out[out['AgeGroup'].isin(age_sel)]
-    if 'Urbanicity' in out and len(urb_sel)>0: out = out[out['Urbanicity'].isin(urb_sel)]
+    out = data
+    if 'Year' in out.columns and year_sel: out = out[out['Year'].isin(year_sel)]
+    if 'USCensusDivision' in out.columns and div_sel: out = out[out['USCensusDivision'].isin(div_sel)]
+    if 'Race' in out.columns and race_sel: out = out[out['Race'].isin(race_sel)]
+    if 'Gender' in out.columns and gen_sel: out = out[out['Gender'].isin(gen_sel)]
+    if 'AgeGroup' in out.columns and age_sel: out = out[out['AgeGroup'].isin(age_sel)]
+    if 'Urbanicity' in out.columns and urb_sel: out = out[out['Urbanicity'].isin(urb_sel)]
     return out
 
 fdf = apply_filters(df)
+
+# ----------------------------
+# 이하 페이지/차트 부분은 기존 코드 그대로 사용
+# (Overview, Data & Cleaning, Univariate EDA, Bivariate EDA, Temporal & Regional, Modeling Plan, About)
+# ----------------------------
+
 
 # ----------------------------
 # Navigation (단일 파일 멀티페이지)
