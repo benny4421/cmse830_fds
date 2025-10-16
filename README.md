@@ -1,4 +1,4 @@
-# **EMS Crash Injury Disparities Dashboard**
+# **Car Crash Data Analysis**
 
 An interactive Streamlit dashboard for exploring demographic disparities in U.S. crash injury outcomes using NEMSIS data (2018-2022).
 
