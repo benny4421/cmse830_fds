@@ -3,16 +3,16 @@ import plotly.express as px
 import streamlit as st
 
 # ----------------------------
-# 페이지 기본 설정
+# Page Setup
 # ----------------------------
 st.set_page_config(page_title="EMS Crash Injury Disparities", page_icon="🚑", layout="wide")
 
 # ----------------------------
-# 데이터 로딩 및 전처리 (GitHub Repo에서 직접 로드)
+# Data Loading and Preprocessing (Directly from GitHub Repo)
 # ----------------------------
-@st.cache_data(show_spinner="데이터 처리 중...")
+@st.cache_data(show_spinner="Processing data...")
 def postprocess(df: pd.DataFrame) -> pd.DataFrame:
-    """데이터 로드 후 타입 변환 등 후처리를 수행합니다."""
+    """Performs post-processing like type conversion after data loading."""
     if 'Year' in df.columns:
         df['Year'] = pd.to_numeric(df['Year'], errors='coerce').astype('Int64')
     if 'AgeGroup' in df.columns:
@@ -20,32 +20,32 @@ def postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df['AgeGroup'] = pd.Categorical(df['AgeGroup'], categories=order, ordered=True)
     return df
 
-@st.cache_data(show_spinner="샘플 데이터 로딩 중...")
+@st.cache_data(show_spinner="Loading sample data...")
 def load_data_from_repo(file_path: str) -> pd.DataFrame:
-    """GitHub 리포지토리 내의 CSV 파일을 로드하고 전처리합니다."""
+    """Loads and preprocesses the CSV file from the GitHub repository."""
     df = pd.read_csv(file_path, low_memory=False)
     df = postprocess(df)
     return df
 
-# --- 메인 데이터 로딩 실행 ---
+# --- Main data loading execution ---
 try:
-    # GitHub 리포지토리에 함께 올린 샘플 데이터 파일명을 여기에 적습니다.
+    # Specify the name of the sample data file uploaded to the GitHub repository.
     df = load_data_from_repo('sampled_ems_data_100k.csv')
 except FileNotFoundError:
-    st.error("오류: 'sampled_ems_data_100k.csv' 파일을 찾을 수 없습니다.")
-    st.info("app.py 파일과 동일한 GitHub 리포지토리 안에 데이터 파일이 있는지 확인해주세요.")
+    st.error("Error: 'sampled_ems_data_100k.csv' file not found.")
+    st.info("Please ensure the data file is in the same GitHub repository as app.py.")
     st.stop()
 except Exception as e:
-    st.error(f"데이터를 로드하는 중 오류가 발생했습니다: {e}")
+    st.error(f"An error occurred while loading the data: {e}")
     st.stop()
 
 # use full dataset everywhere
 fdf = df
 
 # ----------------------------
-# 사이드바: 페이지 네비게이션
+# Sidebar: Page Navigation
 # ----------------------------
-st.sidebar.success(f"데이터 로딩 완료!\n({len(fdf):,} 행)")
+st.sidebar.success(f"Data loaded successfully!\n({len(fdf):,} rows)")
 st.sidebar.header("Navigate")
 
 pages = {
@@ -57,7 +57,7 @@ pages = {
     "🧪 Modeling Plan": "modeling_plan",
     "ℹ️ About": "about",
 }
-page = st.sidebar.radio("페이지 이동", list(pages.keys()))
+page = st.sidebar.radio("Go to", list(pages.keys()))
 
 
 # ----------------------------
@@ -70,7 +70,7 @@ def safe_is_numeric(col):
         return False
 
 # ----------------------------
-# 각 페이지 콘텐츠 (이 부분은 변경되지 않았습니다)
+# Page Content
 # ----------------------------
 if page == "🏠 Overview":
     st.title("🚑 Disparities in EMS-Reported Crash Injury Outcomes")
@@ -91,7 +91,12 @@ This app organizes **exploratory data analysis (EDA)** for U.S. **NEMSIS (2018�
     with c2:
         if 'Year' in fdf: st.write("**Years present:**", ", ".join(map(str, sorted(set(fdf['Year'].dropna())))))
         if 'USCensusDivision' in fdf: st.write("**Divisions present:**", ", ".join(sorted(set(fdf['USCensusDivision'].dropna()))))
+    
+    # --- THIS SECTION IS NEW ---
+    st.subheader("Data Preview")
+    st.dataframe(fdf.head())
     st.info("Move through the pages to cover: Univariate → Bivariate → Temporal/Regional → Modeling plan.")
+
 
 elif page == "🧹 Data & Cleaning":
     st.title("🧹 Data Overview & Cleaning")
@@ -211,3 +216,4 @@ elif page == "🧭 Temporal & Regional":
         sub2.plotly_chart(fig, use_container_width=True)
 
     st.info("After merging ACS 5-year populations, extend this page with **per-100k rate** maps/heatmaps.")
+
