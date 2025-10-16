@@ -53,8 +53,8 @@ st.sidebar.header("Navigate")
 
 pages = {
     "🏠 Overview": "overview",
-    "🕵️ Handling Missing Values": "missing_values",
     "🧹 Handling Data Duplicates": "data_duplicates",
+    "🕵️ Handling Missing Values": "missing_values",
     "🏛️ US Census Data Merging": "census_merging",
     "📊 Visualization": "visualization",
 }
@@ -97,72 +97,6 @@ if page == "🏠 Overview":
     
     st.subheader("Data Preview")
     st.dataframe(fdf.head())
-
-elif page == "🕵️ Handling Missing Values":
-    st.title("🕵️ Handling Missing Values")
-    st.markdown("""
-    Before analysis, identifying and handling missing values is crucial. A simple check for `NaN` (Not a Number) values often misses text-based entries that represent missing data, known as **semantic missing values**.
-    """)
-
-    st.subheader("Step 1: Uncovering Semantic Missing Values")
-    st.markdown("Many columns contained text like 'unknown' or 'not recorded' instead of a standard `NaN`. I identified these common null-like values to standardize them.")
-    common_nulls = [
-        "not recorded", "not applicable", "not known", "unknown", "missing",
-        "none", "null", "n/a", "na", "not available", "refused", "blank", "", "nan"
-    ]
-    st.code(f"Common semantic nulls targeted:\n{common_nulls}", language='python')
-
-    # Define the cleaning function to use it on the sample data
-    @st.cache_data
-    def normalize_and_replace_nulls(df_to_clean):
-        dfc = df_to_clean.copy()
-        for col in dfc.columns:
-            if pd.api.types.is_object_dtype(dfc[col]) or pd.api.types.is_string_dtype(dfc[col]):
-                dfc[col] = dfc[col].where(
-                    dfc[col].isna(),
-                    dfc[col].astype(str).str.lower().str.strip()
-                )
-                dfc[col] = dfc[col].replace(common_nulls, np.nan)
-        return dfc
-
-    # Clean the sample dataframe for visualization
-    fdf_cleaned = normalize_and_replace_nulls(fdf)
-
-    st.subheader("Step 2: Visualizing True Missingness")
-    st.markdown("After replacing all semantic nulls with standard `NaN`, I created a heatmap to visualize the true extent and pattern of missing data across the columns in my sample.")
-    
-    # --- FIX: Create a smaller sample specifically for the memory-intensive heatmap ---
-    sample_for_heatmap = fdf_cleaned.sample(min(10000, len(fdf_cleaned)), random_state=42)
-    
-    fig, ax = plt.subplots(figsize=(12, 8))
-    sns.heatmap(sample_for_heatmap.isnull(), cbar=False, cmap="viridis", ax=ax)
-    ax.set_title("Missing Values Heatmap (Sample of 10,000 Rows)")
-    st.pyplot(fig)
-    st.caption("Each yellow line represents a missing value. This visualization, based on a 10,000-row subsample, helps identify columns with significant data gaps.")
-
-    st.subheader("Step 3: Deep Dive into 'Age Units'")
-    st.markdown("A key area of concern was the `ageinyear` column, which could be misinterpreted without its corresponding `Age Units` (e.g., an age of 11 could mean years or months).")
-
-    if 'Age Units' in fdf_cleaned.columns:
-        age_units_counts = fdf_cleaned['Age Units'].fillna('Missing').value_counts().reset_index()
-        age_units_counts.columns = ['Age Units', 'Count']
-        fig_age_units = px.bar(
-            age_units_counts, x='Age Units', y='Count', color='Age Units',
-            text='Count', title='Distribution of Age Units'
-        )
-        fig_age_units.update_traces(texttemplate='%{text:,}', textposition='outside')
-        st.plotly_chart(fig_age_units, use_container_width=True)
-
-        non_years_df = fdf_cleaned[fdf_cleaned['Age Units'].fillna('Missing') != 'years']
-        st.write(f"**Finding:** There are **{len(non_years_df):,} rows** in the sample where the age unit is not 'years'. Most of these correspond to infants.")
-        st.dataframe(non_years_df[['ageinyear', 'Age Units']].head())
-    else:
-        st.warning("'Age Units' column not found in the dataset.")
-    
-    st.subheader("Step 4: The Solution - Focusing on Age Groups")
-    st.success("""
-    **Action Taken:** Since my analysis focuses on disparities across broader age **groups** (e.g., '0-24', '25-34'), and not on fine-grained age differences for infants, I removed rows where the `Age Units` were not 'years' in my full dataset. This ensures consistency without sacrificing the core objectives of the study.
-    """)
 
 elif page == "🧹 Handling Data Duplicates":
     st.title("🧹 Handling Data Duplicates")
@@ -232,6 +166,70 @@ elif page == "🧹 Handling Data Duplicates":
     Since these duplicates represent data entry mistakes rather than distinct events or patients, they hold no value for imputation and could skew the analysis.
     """)
     st.success(f"**Action Taken:** In my full 6-million-row research dataset, all identified duplicate rows were removed to ensure the integrity of the modeling results.")
+
+elif page == "🕵️ Handling Missing Values":
+    st.title("🕵️ Handling Missing Values")
+    st.markdown("A simple check for `NaN` values often misses text-based entries that represent missing data, known as **semantic missing values**. This page shows the process of identifying and standardizing them.")
+
+    st.subheader("Step 1: Initial Missing Value Heatmap (Before Cleaning)")
+    st.markdown("First, a look at the missing values detected by a standard `isnull()` check. Notice that many columns appear to be complete.")
+    
+    fig_before, ax_before = plt.subplots(figsize=(12, 8))
+    sns.heatmap(fdf.isnull(), cbar=False, cmap="viridis", ax=ax_before)
+    ax_before.set_title("Missing Values Heatmap (Before Cleaning Semantic Nulls)")
+    st.pyplot(fig_before)
+
+    st.subheader("Step 2: Uncovering Semantic Missing Values")
+    st.markdown("Many columns contained text like 'unknown' or 'not recorded'. I identified these common null-like values to standardize them into true `NaN` values.")
+    common_nulls = [
+        "not recorded", "not applicable", "not known", "unknown", "missing",
+        "none", "null", "n/a", "na", "not available", "refused", "blank", "", "nan"
+    ]
+    st.code(f"Common semantic nulls targeted:\n{common_nulls}", language='python')
+
+    @st.cache_data
+    def normalize_and_replace_nulls(df_to_clean):
+        dfc = df_to_clean.copy()
+        for col in dfc.columns:
+            if pd.api.types.is_object_dtype(dfc[col]) or pd.api.types.is_string_dtype(dfc[col]):
+                dfc[col] = dfc[col].where(dfc[col].isna(), dfc[col].astype(str).str.lower().str.strip())
+                dfc[col] = dfc[col].replace(common_nulls, np.nan)
+        return dfc
+
+    fdf_cleaned = normalize_and_replace_nulls(fdf)
+
+    st.subheader("Step 3: Visualizing True Missingness (After Cleaning)")
+    st.markdown("After standardizing the semantic nulls, the heatmap reveals the true extent of missing data much more accurately.")
+    
+    fig_after, ax_after = plt.subplots(figsize=(12, 8))
+    sns.heatmap(fdf_cleaned.isnull(), cbar=False, cmap="viridis", ax=ax_after)
+    ax_after.set_title("Missing Values Heatmap (After Cleaning Semantic Nulls)")
+    st.pyplot(fig_after)
+    st.caption("Each yellow line represents a missing value. The 'after' picture is much clearer.")
+
+    st.subheader("Step 4: Deep Dive into 'Age Units'")
+    st.markdown("A key area of concern was the `ageinyear` column, which could be misinterpreted without its corresponding `Age Units` (e.g., an age of 11 could mean years or months).")
+
+    if 'Age Units' in fdf_cleaned.columns:
+        age_units_counts = fdf_cleaned['Age Units'].fillna('Missing').value_counts().reset_index()
+        age_units_counts.columns = ['Age Units', 'Count']
+        fig_age_units = px.bar(
+            age_units_counts, x='Age Units', y='Count', color='Age Units',
+            text='Count', title='Distribution of Age Units'
+        )
+        fig_age_units.update_traces(texttemplate='%{text:,}', textposition='outside')
+        st.plotly_chart(fig_age_units, use_container_width=True)
+
+        non_years_df = fdf_cleaned[fdf_cleaned['Age Units'].fillna('Missing') != 'years']
+        st.write(f"**Finding:** There are **{len(non_years_df):,} rows** in the sample where the age unit is not 'years'. Most of these correspond to infants.")
+        st.dataframe(non_years_df[['ageinyear', 'Age Units']].head())
+    else:
+        st.warning("'Age Units' column not found in the dataset.")
+    
+    st.subheader("Step 5: The Solution - Focusing on Age Groups")
+    st.success("""
+    **Action Taken:** Since my analysis focuses on disparities across broader age **groups** (e.g., '0-24', '25-34'), and not on fine-grained age differences for infants, I removed rows where the `Age Units` were not 'years' in my full dataset. This ensures consistency without sacrificing the core objectives of the study.
+    """)
 
 elif page == "🏛️ US Census Data Merging":
     st.title("🏛️ US Census Data Merging: The Next Step")
