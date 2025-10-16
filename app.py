@@ -207,8 +207,31 @@ elif page == "🕵️ Handling Missing Values":
     st.pyplot(fig_after)
     st.caption("Each yellow line represents a missing value. The 'after' picture is much clearer.")
 
-    st.subheader("Step 4: Deep Dive into 'Age Units'")
-    st.markdown("A key area of concern was the `ageinyear` column, which could be misinterpreted without its corresponding `Age Units` (e.g., an age of 11 could mean years or months).")
+    st.subheader("Step 4: Handling Missing 'ageinyear' Values")
+    st.markdown("The `ageinyear` column had some missing values. My initial approach was to use a simple mean imputation.")
+
+    mean_age = fdf_cleaned['ageinyear'].mean()
+    st.write(f"The mean age in the sample is **{mean_age:.1f}** years. Let's see what happens if all missing ages are replaced by this value.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        fig_before_impute = px.histogram(fdf_cleaned.dropna(subset=['ageinyear']), x='ageinyear', nbins=50, title="Original Age Distribution")
+        st.plotly_chart(fig_before_impute, use_container_width=True)
+    
+    with col2:
+        df_imputed = fdf_cleaned.copy()
+        df_imputed['ageinyear'] = df_imputed['ageinyear'].fillna(mean_age)
+        fig_after_impute = px.histogram(df_imputed, x='ageinyear', nbins=50, title="After Naive Mean Imputation")
+        fig_after_impute.add_vline(x=mean_age, line_width=2, line_dash="dash", line_color="red", annotation_text=f"Spike at Mean: {mean_age:.1f}")
+        st.plotly_chart(fig_after_impute, use_container_width=True)
+        
+    st.warning("""
+    **Problem:** This creates a large, artificial spike at 38.5 years. When I create categorical `AgeGroup` bins later, this would incorrectly place all these imputed records into a single group, creating a severe data imbalance and biasing the analysis.
+    """)
+    st.success("**Action Taken:** This naive imputation method was rejected. For the final analysis, a more sophisticated imputation technique will be used to preserve the natural distribution of the data.")
+
+    st.subheader("Step 5: Deep Dive into 'Age Units'")
+    st.markdown("Another key area of concern was the `ageinyear` column, which could be misinterpreted without its corresponding `Age Units` (e.g., an age of 11 could mean years or months).")
 
     if 'Age Units' in fdf_cleaned.columns:
         age_units_counts = fdf_cleaned['Age Units'].fillna('Missing').value_counts().reset_index()
@@ -226,7 +249,7 @@ elif page == "🕵️ Handling Missing Values":
     else:
         st.warning("'Age Units' column not found in the dataset.")
     
-    st.subheader("Step 5: The Solution - Focusing on Age Groups")
+    st.subheader("Step 6: The Solution - Focusing on Age Groups")
     st.success("""
     **Action Taken:** Since my analysis focuses on disparities across broader age **groups** (e.g., '0-24', '25-34'), and not on fine-grained age differences for infants, I removed rows where the `Age Units` were not 'years' in my full dataset. This ensures consistency without sacrificing the core objectives of the study.
     """)
