@@ -75,27 +75,28 @@ def safe_is_numeric(col):
 if page == "🏠 Overview":
     st.title("🚑 Disparities in EMS-Reported Crash Injury Outcomes")
     st.markdown("""
-This app organizes **exploratory data analysis (EDA)** for U.S. **NEMSIS (2018–2022)** EMS crash records into a presentation-ready storyline.
-
-**Goals**
-- Understand **pre-normalization** patterns by race, gender, and age group.
-- Later, merge **ACS 2018–2022 5-year** populations to compute **rates per 100,000** and fit models.
-- Support a clear narrative for talks, posters, and papers.
+    This project analyzes demographic disparities in crash-related injury outcomes across the United States. Using a nationally representative dataset of Emergency Medical Services (EMS) records, we aim to identify which population subgroups are disproportionately affected by traffic injuries, with a particular focus on the intersections of **age, gender, and race**.
     """)
 
-    st.subheader("Dataset Snapshot")
-    c1, c2 = st.columns([1,1])
-    with c1:
-        st.write("**Rows:**", f"{len(fdf):,}")
-        st.write("**Columns:**", f"{len(fdf.columns):,}")
-    with c2:
-        if 'Year' in fdf: st.write("**Years present:**", ", ".join(map(str, sorted(set(fdf['Year'].dropna())))))
-        if 'USCensusDivision' in fdf: st.write("**Divisions present:**", ", ".join(sorted(set(fdf['USCensusDivision'].dropna()))))
+    st.subheader("About the Data")
+    st.markdown("""
+    The analysis is based on the **National EMS Information System (NEMSIS)** dataset. We merged individual yearly data files from **2018 to 2022** and created a `Year` column to form a comprehensive database.
+
+    - **The full research dataset contains approximately 6 million records and 28 columns.**
+    - For web performance and hosting reasons, **this interactive Streamlit app uses a randomly sampled subset of 100,000 records** (about 1.6% of the original data) for demonstration and exploratory analysis.
+    """)
+
+    st.subheader("Project Goals and Audience")
+    st.markdown("""
+    Our primary goal is to move beyond simple counts by normalizing injury data with **U.S. Census Bureau ACS 5-Year Estimates**. This allows us to calculate injury rates per 100,000 people, providing a more accurate picture of risk across different demographic groups.
+
+    The findings from this research are intended to inform and guide evidence-based policy for **government bodies, public health departments, and transportation safety agencies**, ultimately contributing to improved transportation equity and targeted safety interventions.
+    """)
     
-    # --- THIS SECTION IS NEW ---
     st.subheader("Data Preview")
     st.dataframe(fdf.head())
-    st.info("Move through the pages to cover: Univariate → Bivariate → Temporal/Regional → Modeling plan.")
+    
+    st.info("This app follows our analytical workflow. Use the navigation panel on the left to move from initial data exploration (Cleaning, Univariate, Bivariate) to our planned modeling approach.")
 
 
 elif page == "🧹 Data & Cleaning":
