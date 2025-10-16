@@ -2,23 +2,23 @@
 
 An interactive Streamlit dashboard for exploring demographic disparities in U.S. crash injury outcomes using NEMSIS data (2018-2022).
 
-## **🚀 Live Application**
+## ** Live Application**
 
 The interactive dashboard is publicly deployed and can be accessed directly via the following link:
 
 [**https://cmse830fds-3zuewsuxruovjwtxwiyqh9.streamlit.app/**](https://cmse830fds-3zuewsuxruovjwtxwiyqh9.streamlit.app/)
 
-## **🧭 Application Structure (Table of Contents)**
+## ** Application Structure (Table of Contents)**
 
 The dashboard is organized into a logical narrative that walks you through the data analysis process. You can navigate through the pages using the sidebar on the left.
 
-1. **🏠 Overview**: Introduces the project's goals, target audience (policymakers, safety agencies), and provides a preview of the dataset.  
-2. **🧹 Handling Data Duplicates**: Details the investigation into semantic duplicate records and the data cleaning strategy.  
-3. **🕵️ Handling Missing Values**: Explains the process of identifying and standardizing both standard (NaN) and semantic ("unknown", "not recorded") missing values.  
-4. **🏛️ US Census Data Merging**: Describes the next step in the analysis—normalizing the crash data with population counts for a more accurate assessment.  
-5. **📊 Visualization**: Presents the key preliminary findings through a series of interactive charts.
+1. ** Overview**: Introduces the project's goals, target audience (policymakers, safety agencies), and provides a preview of the dataset.  
+2. ** Handling Data Duplicates**: Details the investigation into semantic duplicate records and the data cleaning strategy.  
+3. ** Handling Missing Values**: Explains the process of identifying and standardizing both standard (NaN) and semantic ("unknown", "not recorded") missing values.  
+4. ** US Census Data Merging**: Describes the next step in the analysis—normalizing the crash data with population counts for a more accurate assessment.  
+5. ** Visualization**: Presents the key preliminary findings through a series of interactive charts.
 
-## **✨ Interactive Features**
+## ** Interactive Features**
 
 This dashboard is built for exploration. Here are some of the key interactive features you can use:
 
