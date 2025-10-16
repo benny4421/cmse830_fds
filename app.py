@@ -1,15 +1,18 @@
-import io, requests
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+# ----------------------------
+# 페이지 기본 설정
+# ----------------------------
 st.set_page_config(page_title="EMS Crash Injury Disparities", page_icon="🚑", layout="wide")
 
 # ----------------------------
-# Data Loader (Google Drive)
+# 데이터 로딩 및 전처리 (GitHub Repo에서 직접 로드)
 # ----------------------------
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner="데이터 처리 중...")
 def postprocess(df: pd.DataFrame) -> pd.DataFrame:
+    """데이터 로드 후 타입 변환 등 후처리를 수행합니다."""
     if 'Year' in df.columns:
         df['Year'] = pd.to_numeric(df['Year'], errors='coerce').astype('Int64')
     if 'AgeGroup' in df.columns:
@@ -17,45 +20,34 @@ def postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df['AgeGroup'] = pd.Categorical(df['AgeGroup'], categories=order, ordered=True)
     return df
 
-@st.cache_data(show_spinner=True)
-def load_drive_csv(drive_link: str) -> pd.DataFrame:
-    # accept both a “/d/FILEID/” sharing link or a direct “?id=FILEID” link
-    file_id = None
-    if "id=" in drive_link:
-        file_id = drive_link.split("id=")[-1]
-    elif "/d/" in drive_link:
-        file_id = drive_link.split("/d/")[1].split("/")[0]
-    else:
-        raise ValueError("Invalid Google Drive link format.")
-    direct_url = f"https://drive.google.com/uc?id={file_id}"
-    r = requests.get(direct_url, stream=True, timeout=120)
-    r.raise_for_status()
-    df = pd.read_csv(io.BytesIO(r.content), low_memory=False)
-    return postprocess(df)
+@st.cache_data(show_spinner="샘플 데이터 로딩 중...")
+def load_data_from_repo(file_path: str) -> pd.DataFrame:
+    """GitHub 리포지토리 내의 CSV 파일을 로드하고 전처리합니다."""
+    df = pd.read_csv(file_path, low_memory=False)
+    df = postprocess(df)
+    return df
 
-# ----------------------------
-# Sidebar: Data source + Navigation (NO FILTERS)
-# ----------------------------
-st.sidebar.header("📂 Data")
-uploaded = st.sidebar.file_uploader("Upload CSV (≤ ~200MB)", type=["csv"])
-drive_default = "https://drive.google.com/file/d/1XQfuB-XnwmgfiUy2miouQqkyPsP7yrWF/view?usp=sharing"
-drive_link = st.sidebar.text_input("Or paste Google Drive link", value=drive_default)
-
+# --- 메인 데이터 로딩 실행 ---
 try:
-    if uploaded is not None:
-        df = postprocess(pd.read_csv(uploaded, low_memory=False))
-        st.sidebar.success(f"Loaded from upload: {len(df):,} rows")
-    else:
-        df = load_drive_csv(drive_link)
-        st.sidebar.success(f"Loaded from Drive: {len(df):,} rows")
+    # GitHub 리포지토리에 함께 올린 샘플 데이터 파일명을 여기에 적습니다.
+    df = load_data_from_repo('sampled_ems_data_100k.csv')
+except FileNotFoundError:
+    st.error("오류: 'sampled_ems_data_100k.csv' 파일을 찾을 수 없습니다.")
+    st.info("app.py 파일과 동일한 GitHub 리포지토리 안에 데이터 파일이 있는지 확인해주세요.")
+    st.stop()
 except Exception as e:
-    st.sidebar.error(f"Data load failed: {e}")
+    st.error(f"데이터를 로드하는 중 오류가 발생했습니다: {e}")
     st.stop()
 
 # use full dataset everywhere
 fdf = df
 
-# navigation
+# ----------------------------
+# 사이드바: 페이지 네비게이션
+# ----------------------------
+st.sidebar.success(f"데이터 로딩 완료!\n({len(fdf):,} 행)")
+st.sidebar.header("Navigate")
+
 pages = {
     "🏠 Overview": "overview",
     "🧹 Data & Cleaning": "data_cleaning",
@@ -65,7 +57,8 @@ pages = {
     "🧪 Modeling Plan": "modeling_plan",
     "ℹ️ About": "about",
 }
-page = st.sidebar.radio("Navigate", list(pages.keys()))
+page = st.sidebar.radio("페이지 이동", list(pages.keys()))
+
 
 # ----------------------------
 # Helper
@@ -77,7 +70,7 @@ def safe_is_numeric(col):
         return False
 
 # ----------------------------
-# Pages
+# 각 페이지 콘텐츠 (이 부분은 변경되지 않았습니다)
 # ----------------------------
 if page == "🏠 Overview":
     st.title("🚑 Disparities in EMS-Reported Crash Injury Outcomes")
@@ -136,8 +129,8 @@ elif page == "📈 Univariate EDA":
     # Race — Bar
     if 'Race' in fdf:
         race_counts = (fdf.dropna(subset=['Race'])
-                         .groupby('Race').size().reset_index(name='Count')
-                         .sort_values('Count', ascending=False))
+                          .groupby('Race').size().reset_index(name='Count')
+                          .sort_values('Count', ascending=False))
         with col2:
             fig = px.bar(race_counts, x='Race', y='Count', color='Race',
                          title="Crash Counts by Race")
@@ -210,12 +203,11 @@ elif page == "🧭 Temporal & Regional":
     # Division bar
     if 'USCensusDivision' in fdf:
         div_counts = (fdf.dropna(subset=['USCensusDivision'])
-                        .groupby('USCensusDivision').size()
-                        .reset_index(name='Count').sort_values('Count', ascending=False))
+                         .groupby('USCensusDivision').size()
+                         .reset_index(name='Count').sort_values('Count', ascending=False))
         fig = px.bar(div_counts, x='USCensusDivision', y='Count', color='USCensusDivision',
                      title='Crash Counts by U.S. Census Division')
         fig.update_layout(xaxis_tickangle=35, showlegend=False)
         sub2.plotly_chart(fig, use_container_width=True)
 
     st.info("After merging ACS 5-year populations, extend this page with **per-100k rate** maps/heatmaps.")
-
