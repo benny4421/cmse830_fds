@@ -174,7 +174,7 @@ elif page == "🕵️ Handling Missing Values":
     st.subheader("Step 1: Initial Missing Value Heatmap (Before Cleaning)")
     st.markdown("First, a look at the missing values detected by a standard `isnull()` check. Notice that many columns appear to be complete.")
     
-    fig_before, ax_before = plt.subplots(figsize=(12, 8))
+    fig_before, ax_before = plt.subplots(figsize=(6, 4))
     sns.heatmap(fdf.isnull(), cbar=False, cmap="viridis", ax=ax_before)
     ax_before.set_title("Missing Values Heatmap (Before Cleaning Semantic Nulls)")
     st.pyplot(fig_before)
@@ -201,7 +201,7 @@ elif page == "🕵️ Handling Missing Values":
     st.subheader("Step 3: Visualizing True Missingness (After Cleaning)")
     st.markdown("After standardizing the semantic nulls, the heatmap reveals the true extent of missing data much more accurately.")
     
-    fig_after, ax_after = plt.subplots(figsize=(12, 8))
+    fig_after, ax_after = plt.subplots(figsize=(6, 4))
     sns.heatmap(fdf_cleaned.isnull(), cbar=False, cmap="viridis", ax=ax_after)
     ax_after.set_title("Missing Values Heatmap (After Cleaning Semantic Nulls)")
     st.pyplot(fig_after)
