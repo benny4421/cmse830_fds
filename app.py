@@ -48,14 +48,11 @@ fdf = df
 st.sidebar.success(f"Data loaded successfully!\n({len(fdf):,} rows)")
 st.sidebar.header("Navigate")
 
+# --- Pages dictionary updated ---
 pages = {
     "🏠 Overview": "overview",
-    "🧹 Handling Data Duplicates": "data_duplicates", # PAGE RENAMED
-    "📈 Univariate EDA": "univariate",
-    "🔗 Bivariate EDA": "bivariate",
-    "🧭 Temporal & Regional": "temporal_regional",
-    "🧪 Modeling Plan": "modeling_plan",
-    "ℹ️ About": "about",
+    "🧹 Handling Data Duplicates": "data_duplicates",
+    "📊 Visualization": "visualization",
 }
 page = st.sidebar.radio("Go to", list(pages.keys()))
 
@@ -89,24 +86,24 @@ if page == "🏠 Overview":
 
     st.subheader("Data at a Glance")
     st.markdown("""
-    - **Source**: National EMS Information System (NEMSIS), 2018-2022.[Merge with year column] ACS 5-year estimates for population denominators.
+    - **Source**: National EMS Information System (NEMSIS), 2018-2022.
     - **Full Dataset**: The complete research dataset contains ~6 million records.
     - **App Dataset**: For interactive performance, this dashboard uses a **100,000-record sample** to illustrate key trends.
     """)
     
     st.subheader("Data Preview")
     st.dataframe(fdf.head())
-
+    
+    st.info("Use the navigation panel to explore the data, from initial cleaning to key visualizations.")
 
 elif page == "🧹 Handling Data Duplicates":
     st.title("🧹 Handling Data Duplicates")
     st.markdown("""
-    Data quality is paramount. Our first step was to check for duplicate records. While no **perfectly identical rows** were found, we investigated potential **semantic duplicates** based on the primary incident identifier.
+    Data quality is paramount. My first step was to check for duplicate records. While no **perfectly identical rows** were found, I investigated potential **semantic duplicates** based on the primary incident identifier.
     """)
 
-    # --- Step 1: Identify Duplicates by Primary Key ---
     st.subheader("Step 1: Identifying Duplicates by Incident ID (`PcrKey`)")
-    st.markdown("`PcrKey` should be a unique key for each EMS incident. We checked if any `PcrKey` appeared more than once.")
+    st.markdown("`PcrKey` should be a unique key for each EMS incident. I checked if any `PcrKey` appeared more than once.")
     
     total_count = len(fdf)
     unique_count = fdf['PcrKey'].nunique()
@@ -116,160 +113,108 @@ elif page == "🧹 Handling Data Duplicates":
     col1.metric("Total Rows in Sample", f"{total_count:,}")
     col2.metric("Unique Incident Keys", f"{unique_count:,}")
     col3.metric("Rows with Duplicated Keys", f"{duplicated_incidents:,}", delta=f"-{duplicated_incidents:,} potential errors", delta_color="inverse")
-    
-    st.code("""
-# Check for duplicated data using PcrKey as a 'primary key'
-total_count = len(df)
-unique_count = df['PcrKey'].nunique()
-duplicated_rows = total_count - unique_count
-    """, language='python')
 
-    # --- Step 2: Investigate Causes ---
     st.subheader("Step 2: Investigating the Cause of Duplicates")
-    st.markdown("The duplicated rows were not perfectly identical, so we formed several hypotheses to explain the cause.")
+    st.markdown("The duplicated rows were not perfectly identical, so I formed several hypotheses to explain the cause.")
     
-    dup_keys = fdf['PcrKey'].value_counts()
-    dup_keys = dup_keys[dup_keys > 1].index
-    dup_df = fdf[fdf['PcrKey'].isin(dup_keys)]
+    dup_keys_series = fdf['PcrKey'].value_counts()
+    dup_keys_list = dup_keys_series[dup_keys_series > 1].index
+    dup_df = fdf[fdf['PcrKey'].isin(dup_keys_list)]
 
-    with st.expander("Hypothesis 1: Cross-Year Duplicates (Same incident logged in different years)"):
+    with st.expander("Hypothesis 1: Cross-Year Duplicates"):
         cross_year = dup_df.groupby('PcrKey')['Year'].nunique().value_counts()
         st.write("Most duplicated incidents appear within the same year, ruling this out as a primary cause.")
         st.dataframe(cross_year.reset_index().rename(columns={'index': 'Number of Unique Years', 'Year': 'Count of Incidents'}))
 
-    with st.expander("Hypothesis 2: Multi-Patient Duplicates (Multiple patients in one incident)"):
-        # Note: Adapted 'ageinyear' to a likely column name 'Age_Number'. If not present, this will gracefully fail.
-        age_col = 'Age_Number' if 'Age_Number' in dup_df.columns else 'PcrKey' # Fallback
+    with st.expander("Hypothesis 2: Multi-Patient Duplicates"):
+        age_col = 'Age_Number' if 'Age_Number' in dup_df.columns else 'PcrKey'
         multi_patient = dup_df.groupby('PcrKey')[['Gender', age_col]].nunique()
         is_multi = ((multi_patient['Gender'] > 1) | (multi_patient[age_col] > 1)).sum()
-        st.write(f"We checked if duplicated keys had different gender or age values, which would indicate multiple patients. **Result: {is_multi} cases found.** This is not the cause.")
+        st.write(f"I checked if duplicated keys had different gender or age values. **Result: {is_multi} cases found.** This is not the cause.")
 
-    with st.expander("Hypothesis 3: Revision Duplicates (Updated versions of a record)"):
+    with st.expander("Hypothesis 3: Revision Duplicates"):
         time_cols = [c for c in fdf.columns if 'Time' in c]
         if time_cols:
             revision_like = dup_df.groupby('PcrKey')[time_cols].nunique().max(axis=1) > 1
-            st.write(f"We checked for differences in timestamps across records with the same key. **Result: {revision_like.sum()} cases found.** This is also not the cause.")
+            st.write(f"I checked for differences in timestamps across records with the same key. **Result: {revision_like.sum()} cases found.** This is also not the cause.")
         else:
             st.warning("No time-related columns found in the sample data to perform this check.")
 
-    # --- Step 3: The Finding ---
     st.subheader("Step 3: The Finding - Data Entry Errors")
     st.markdown("""
-    With our initial hypotheses disproven, we manually inspected a sample of the duplicated records. The investigation revealed the true cause: **minor data entry errors**.
+    With my initial hypotheses disproven, I manually inspected a sample of the duplicated records. The investigation revealed the true cause: **minor data entry errors**.
 
     Specifically, for the same incident (`PcrKey`), all columns were identical *except for `Race`*. This suggests EMS teams occasionally created multiple records for a single patient due to accidental misclassification of race.
     """)
     
-    # Find a good example to show
-    example_key = dup_keys[0]
-    example_df = dup_df[dup_df['PcrKey'] == example_key]
-    st.dataframe(example_df)
-    st.caption(f"Example: The two rows above share the same `PcrKey` ({example_key}) but have different `Race` values. All other fields are identical.")
+    # Find a PcrKey where the Race is actually different to show a better example
+    race_diffs = dup_df.groupby('PcrKey')['Race'].nunique()
+    keys_with_diff_race = race_diffs[race_diffs > 1].index
+    
+    if not keys_with_diff_race.empty:
+        example_key = keys_with_diff_race[0]
+        example_df = dup_df[dup_df['PcrKey'] == example_key].sort_values('Race')
+        st.dataframe(example_df)
+        st.caption(f"Example: The two rows above share the same `PcrKey` ({example_key}) but have different `Race` values. All other fields are identical.")
+    else:
+        st.warning("A clear example of race discrepancy was not found in this specific 100k sample, but the pattern was confirmed in the full dataset.")
+        st.dataframe(dup_df.head(2))
 
-    # --- Step 4: The Solution ---
     st.subheader("Step 4: The Solution - Removing Erroneous Records")
     st.markdown("""
-    Since these duplicates represent data entry mistakes rather than distinct events or patients, they hold no value for imputation and could skew our analysis.
+    Since these duplicates represent data entry mistakes rather than distinct events or patients, they hold no value for imputation and could skew the analysis.
     """)
-    st.success(f"**Action Taken:** In our full 6-million-row research dataset, all {duplicated_incidents:,} identified duplicate rows were removed to ensure the integrity of our modeling results.")
+    st.success(f"**Action Taken:** In my full 6-million-row research dataset, all identified duplicate rows were removed to ensure the integrity of the modeling results.")
 
+# --- NEW VISUALIZATION PAGE ---
+elif page == "📊 Visualization":
+    st.title("📊 Key Visualizations")
+    st.markdown("This page highlights the primary demographic and temporal distributions found in the EMS crash data sample.")
 
-elif page == "📈 Univariate EDA":
-    st.title("📈 Univariate EDA")
     col1, col2 = st.columns(2)
 
-    # Gender — Donut
-    if 'Gender' in fdf:
-        gender_counts = fdf.dropna(subset=['Gender']).groupby('Gender').size().reset_index(name='Count')
-        with col1:
-            fig = px.pie(gender_counts, names='Gender', values='Count', hole=0.4,
-                         title="Crash Counts by Gender")
-            fig.update_traces(textinfo='percent+label', pull=[0.04]*len(gender_counts))
-            st.plotly_chart(fig, use_container_width=True)
+    # Chart 1: Gender Donut
+    with col1:
+        if 'Gender' in fdf:
+            gender_counts = fdf.dropna(subset=['Gender']).groupby('Gender').size().reset_index(name='Count')
+            fig_gender = px.pie(gender_counts, names='Gender', values='Count', hole=0.4,
+                                title="Crash Counts by Gender")
+            fig_gender.update_traces(textinfo='percent+label', pull=[0.04]*len(gender_counts))
+            st.plotly_chart(fig_gender, use_container_width=True)
 
-    # Race — Bar
-    if 'Race' in fdf:
-        race_counts = (fdf.dropna(subset=['Race'])
-                          .groupby('Race').size().reset_index(name='Count')
-                          .sort_values('Count', ascending=False))
-        with col2:
-            fig = px.bar(race_counts, x='Race', y='Count', color='Race',
-                         title="Crash Counts by Race")
-            fig.update_layout(xaxis_tickangle=35)
-            st.plotly_chart(fig, use_container_width=True)
-
+    # Chart 2: Race Bar
+    with col2:
+        if 'Race' in fdf:
+            race_counts = (fdf.dropna(subset=['Race'])
+                              .groupby('Race').size().reset_index(name='Count')
+                              .sort_values('Count', ascending=False))
+            fig_race = px.bar(race_counts, x='Race', y='Count', color='Race',
+                             title="Crash Counts by Race")
+            fig_race.update_layout(xaxis_tickangle=35)
+            st.plotly_chart(fig_race, use_container_width=True)
+    
     st.divider()
-    # AgeGroup — Bar
-    if 'AgeGroup' in fdf:
-        age_counts = fdf.dropna(subset=['AgeGroup']).groupby('AgeGroup').size().reset_index(name='Count')
-        if pd.api.types.is_categorical_dtype(age_counts['AgeGroup']):
-            age_counts = age_counts.sort_values('AgeGroup')
-        fig = px.bar(age_counts, x='AgeGroup', y='Count', text='Count', color='AgeGroup',
-                     title="Crash Counts by Age Group")
-        fig.update_traces(textposition='outside')
-        st.plotly_chart(fig, use_container_width=True)
+    
+    col3, col4 = st.columns(2)
 
-elif page == "🔗 Bivariate EDA":
-    st.title("🔗 Bivariate EDA")
-    tabs = st.tabs(["Gender × Race", "AgeGroup × Gender", "Race × Urbanicity"])
+    # Chart 3: Year trend
+    with col3:
+        if 'Year' in fdf:
+            year_counts = fdf.dropna(subset=['Year']).groupby('Year').size().reset_index(name='Count')
+            year_counts['Year'] = year_counts['Year'].astype('Int64')
+            fig_year = px.line(year_counts, x='Year', y='Count', markers=True,
+                          title='Crash Counts by Year')
+            fig_year.update_layout(xaxis=dict(dtick=1))
+            st.plotly_chart(fig_year, use_container_width=True)
 
-    # Gender × Race
-    with tabs[0]:
-        if set(['Gender','Race']).issubset(fdf.columns):
-            cross = fdf.dropna(subset=['Gender','Race']).groupby(['Gender','Race']).size().reset_index(name='Count')
-            fig = px.density_heatmap(cross, x='Race', y='Gender', z='Count',
-                                     color_continuous_scale='Viridis',
-                                     title="Crash Counts — Gender × Race")
-            fig.update_layout(xaxis_tickangle=35)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Columns `Gender` and `Race` required.")
-
-    # AgeGroup × Gender
-    with tabs[1]:
-        if set(['AgeGroup','Gender']).issubset(fdf.columns):
-            ag = fdf.dropna(subset=['AgeGroup','Gender']).groupby(['AgeGroup','Gender']).size().reset_index(name='Count')
-            if 'AgeGroup' in ag and ag['AgeGroup'].dtype.name == 'category':
-                ag = ag.sort_values('AgeGroup')
-            fig = px.bar(ag, x='AgeGroup', y='Count', color='Gender', barmode='group',
-                         title="Crash Counts — Age Group × Gender")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Columns `AgeGroup` and `Gender` required.")
-
-    # Race × Urbanicity
-    with tabs[2]:
-        if set(['Race','Urbanicity']).issubset(fdf.columns):
-            cu = fdf.dropna(subset=['Race','Urbanicity']).groupby(['Race','Urbanicity']).size().reset_index(name='Count')
-            fig = px.density_heatmap(cu, x='Urbanicity', y='Race', z='Count',
-                                     color_continuous_scale='Plasma',
-                                     title="Crash Counts — Race × Urbanicity")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Columns `Race` and `Urbanicity` required.")
-
-elif page == "🧭 Temporal & Regional":
-    st.title("🧭 Temporal & Regional Patterns")
-    sub1, sub2 = st.columns(2)
-
-    # Year trend
-    if 'Year' in fdf:
-        year_counts = fdf.dropna(subset=['Year']).groupby('Year').size().reset_index(name='Count')
-        year_counts['Year'] = year_counts['Year'].astype('Int64')
-        fig = px.line(year_counts, x='Year', y='Count', markers=True,
-                      title='Crash Counts by Year')
-        fig.update_layout(xaxis=dict(dtick=1))
-        sub1.plotly_chart(fig, use_container_width=True)
-
-    # Division bar
-    if 'USCensusDivision' in fdf:
-        div_counts = (fdf.dropna(subset=['USCensusDivision'])
-                         .groupby('USCensusDivision').size()
-                         .reset_index(name='Count').sort_values('Count', ascending=False))
-        fig = px.bar(div_counts, x='USCensusDivision', y='Count', color='USCensusDivision',
-                     title='Crash Counts by U.S. Census Division')
-        fig.update_layout(xaxis_tickangle=35, showlegend=False)
-        sub2.plotly_chart(fig, use_container_width=True)
-
-    st.info("After merging ACS 5-year populations, extend this page with **per-100k rate** maps/heatmaps.")
+    # Chart 4: Division bar
+    with col4:
+        if 'USCensusDivision' in fdf:
+            div_counts = (fdf.dropna(subset=['USCensusDivision'])
+                             .groupby('USCensusDivision').size()
+                             .reset_index(name='Count').sort_values('Count', ascending=False))
+            fig_div = px.bar(div_counts, x='USCensusDivision', y='Count', color='USCensusDivision',
+                         title='Crash Counts by U.S. Census Division')
+            fig_div.update_layout(xaxis_tickangle=35, showlegend=False)
+            st.plotly_chart(fig_div, use_container_width=True)
 
