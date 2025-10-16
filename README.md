@@ -1,5 +1,4 @@
-# cmse830_fds
-
-This repository is for **CMSE 830** as part of the **MSU Master of Science in Data Science (MSDS) program**.  
-It contains coursework, assignments, and related materials for the class.
-
+EMS Crash Injury Disparities DashboardAn interactive Streamlit dashboard for exploring demographic disparities in U.S. crash injury outcomes using NEMSIS data (2018-2022).Note: Replace with your deployed app's URL.OverviewThis project provides a data-driven tool for policymakers and safety agencies to analyze traffic injury patterns. It walks through the data cleaning process for a large national dataset and visualizes key trends by demographics and time. The goal is to identify high-risk groups to support equitable transportation safety policies.For performance, this app runs on a 100,000-record sample of the full 6-million-record dataset.Running LocallyTo run this dashboard on your machine, follow these steps.Clone the Repositorygit clone [https://github.com/YourUsername/YourRepositoryName.git](https://github.com/YourUsername/YourRepositoryName.git)
+cd YourRepositoryName
+Install Dependenciespip install -r requirements.txt
+(Requires Python 3.8+. You may need to create a requirements.txt file containing streamlit, pandas, plotly, numpy, seaborn, matplotlib)Run the Appstreamlit run app.py
