@@ -48,10 +48,11 @@ fdf = df
 st.sidebar.success(f"Data loaded successfully!\n({len(fdf):,} rows)")
 st.sidebar.header("Navigate")
 
-# --- Pages dictionary updated ---
+# --- Pages dictionary updated with the new page ---
 pages = {
     "🏠 Overview": "overview",
     "🧹 Handling Data Duplicates": "data_duplicates",
+    "🏛️ US Census Data Merging": "census_merging",
     "📊 Visualization": "visualization",
 }
 page = st.sidebar.radio("Go to", list(pages.keys()))
@@ -147,7 +148,6 @@ elif page == "🧹 Handling Data Duplicates":
     Specifically, for the same incident (`PcrKey`), all columns were identical *except for `Race`*. This suggests EMS teams occasionally created multiple records for a single patient due to accidental misclassification of race.
     """)
     
-    # Find a PcrKey where the Race is actually different to show a better example
     race_diffs = dup_df.groupby('PcrKey')['Race'].nunique()
     keys_with_diff_race = race_diffs[race_diffs > 1].index
     
@@ -166,10 +166,43 @@ elif page == "🧹 Handling Data Duplicates":
     """)
     st.success(f"**Action Taken:** In my full 6-million-row research dataset, all identified duplicate rows were removed to ensure the integrity of the modeling results.")
 
-# --- NEW VISUALIZATION PAGE ---
+# --- NEW CENSUS MERGING PAGE ---
+elif page == "🏛️ US Census Data Merging":
+    st.title("🏛️ US Census Data Merging: The Next Step")
+    st.markdown("""
+    To accurately assess injury disparities, a simple count of incidents is insufficient. A group might have more injuries simply because their population is larger. The critical step is to **normalize** our EMS data with population counts to calculate rates (e.g., incidents per 100,000 people).
+    """)
+
+    st.subheader("Goal: Creating Population-Adjusted Rates")
+    st.markdown("""
+    My objective is to merge the EMS crash data with the **2018–2022 ACS 5-Year Estimates** from the U.S. Census Bureau. This will allow me to create a detailed population table structured like this:
+    """)
+    st.code("""
+    # Target structure for the population data
+    Division		Sex	  Race	   AgeGroup	 Population
+    East North Central	Male	  Black	   0-24		  12,300
+    East North Central	Male	  Black	   25-34	  4,800
+    ...
+    """, language='python')
+    st.markdown("Tools like the `Tidycensus` package in R are ideal for acquiring this granular data.")
+
+    st.subheader("Current Status & Next Steps")
+    st.info("""
+    The data merging process presented some initial challenges. Therefore, I decided to proceed with a preliminary exploratory data analysis (EDA) first to understand the raw patterns in the data.
+    """)
+
+    st.warning("""
+    **Important Caveat for the 'Visualization' Page:**
+    
+    The charts presented in the next section are based on **raw incident counts**, not population-adjusted rates.
+    
+    This means the rankings and proportions are preliminary. They are expected to **change significantly** once the population data is successfully merged. The current visualizations show *where* incidents are occurring in the dataset, while the final, normalized data will show *which groups are disproportionately affected*.
+    """)
+
+
 elif page == "📊 Visualization":
-    st.title("📊 Key Visualizations")
-    st.markdown("This page highlights the primary demographic and temporal distributions found in the EMS crash data sample.")
+    st.title("📊 Key Visualizations (Based on Raw Counts)")
+    st.markdown("This page highlights the primary demographic and temporal distributions found in the EMS crash data sample. **Note:** These are raw counts and have not yet been normalized by population.")
 
     col1, col2 = st.columns(2)
 
