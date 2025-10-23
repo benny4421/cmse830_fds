@@ -122,11 +122,11 @@ glm.nb(InjuryCount ~ Race + Gender + AgeGroup + CensusRegion + RuralUrban + Year
 
 **Pages**
 
-* **🏠 Overview** – Project goals, audiences, and dataset preview.
-* **🧹 Handling Data Duplicates** – `PcrKey` uniqueness audit; semantic duplicate diagnosis; remediation rationale.
-* **🕵️ Handling Missing Values** – Semantic null cleaning; heatmaps before/after; **mean imputation failure** demo; `Age Units` analysis & decision.
-* **🏛️ US Census Data Merging** – Why rates matter; target population schema; status & next steps.
-* **📊 Visualization** – 4 key charts with interactive Plotly components.
+* ** Overview** – Project goals, audiences, and dataset preview.
+* ** Handling Data Duplicates** – `PcrKey` uniqueness audit; semantic duplicate diagnosis; remediation rationale.
+* ** Handling Missing Values** – Semantic null cleaning; heatmaps before/after; **mean imputation failure** demo; `Age Units` analysis & decision.
+* ** US Census Data Merging** – Why rates matter; target population schema; status & next steps.
+* ** Visualization** – 4 key charts with interactive Plotly components.
 
 **Interactive elements**
 
