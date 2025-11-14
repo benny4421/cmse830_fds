@@ -257,28 +257,51 @@ elif page == "🕵️ Handling Missing Values":
     """)
 
 elif page == "🏛️ US Census Data Merging":
-    st.title("🏛️ US Census Data Merging: The Next Step")
+    st.title("🏛️ US Census Data Merging: Completed Integration")
+
     st.markdown("""
-    To accurately assess injury disparities, a simple count of incidents is insufficient. A group might have more injuries simply because their population is larger. The critical step is to **normalize** my EMS data with population counts to calculate rates (e.g., incidents per 100,000 people).
+    To accurately assess injury disparities, raw incident counts alone are insufficient. 
+    A demographic group may have more EMS-reported injuries simply because their population is larger.  
+    To correct for this, it is essential to **normalize EMS crash counts using population denominators** 
+    (e.g., incidents per 100,000 people).
     """)
 
     st.subheader("Goal: Creating Population-Adjusted Rates")
     st.markdown("""
-    My objective is to merge the EMS crash data with the **2018–2022 ACS 5-Year Estimates** from the U.S. Census Bureau. This will allow me to create a detailed population table structured like this:
+    I merged the EMS crash dataset with **2018–2022 ACS 5-Year Estimates** from the U.S. Census Bureau.  
+    This allows the construction of a population table with the following structure:
     """)
+
     st.code("""
-    # Target structure for the population data
-    Division		Sex	  Race	   AgeGroup	 Population
-    East North Central	Male	  Black	   0-24		  12,300
-    East North Central	Male	  Black	   25-34	  4,800
+    # Target structure for merged population data
+    Division           Sex     Race      AgeGroup     Population
+    East North Central Male    Black     0-24         12,300
+    East North Central Male    Black     25-34        4,800
     ...
     """, language='python')
-    st.markdown("I attempted this merge using Python's Census library to acquire this granular data.")
 
-    st.subheader("Current Status & Next Steps")
-    st.info("""
-    The data merging process presented some initial challenges. Therefore, I decided to proceed with a preliminary exploratory data analysis (EDA) first to understand the raw patterns in the data. The visualizations on the next page reflect this initial step.
+    st.markdown("""
+    The merging process required detailed alignment of multiple demographic keys 
+    (**Gender × Race × Census Division × AgeGroup**).  
+    After pre-processing both the NEMSIS and ACS datasets, the population values were successfully 
+    joined to the EMS records.
     """)
+
+    st.subheader("Status: Merge Successfully Completed")
+    st.success("""
+    The ACS population data has now been fully integrated.  
+    For every EMS record, I created a new population denominator column corresponding to the matching 
+    demographic group (Gender × Race × Division × AgeGroup).
+
+    This enables the calculation of **population-adjusted injury rates**, allowing meaningful comparisons
+    across demographic and geographic groups.
+    """)
+
+    st.markdown("""
+    You will see these new population-adjusted metrics reflected in the updated analyses 
+    and visualizations on the next pages.
+    """)
+
 
 elif page == "📊 Visualization":
     st.title("📊 Key Visualizations")
@@ -331,6 +354,7 @@ elif page == "📊 Visualization":
                          title='Crash Counts by U.S. Census Division')
             fig_div.update_layout(xaxis_tickangle=35, showlegend=False)
             st.plotly_chart(fig_div, use_container_width=True)
+
 
 
 
