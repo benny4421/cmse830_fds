@@ -90,10 +90,9 @@ if page == "🏠 Overview":
 
     st.subheader("Data at a Glance")
     st.markdown("""
-    -  **Sources**:
+    - **Sources**:
     - National EMS Information System (NEMSIS), 2018–2022  
-    - **U.S. Census Bureau — 2018–2022 American Community Survey (ACS) 5-Year Estimates**
-
+  - **U.S. Census Bureau — 2018–2022 American Community Survey (ACS) 5-Year Estimates**
     - **Full Dataset**: The complete research dataset contains ~6 million records.
     - **App Dataset**: For interactive performance, this dashboard uses a **100,000-record sample** to illustrate key trends.
     """)
@@ -336,5 +335,4 @@ elif page == "📊 Visualization":
                          title='Crash Counts by U.S. Census Division')
             fig_div.update_layout(xaxis_tickangle=35, showlegend=False)
             st.plotly_chart(fig_div, use_container_width=True)
-
 
