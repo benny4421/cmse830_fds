@@ -92,7 +92,7 @@ if page == "🏠 Overview":
     st.markdown("""
     - **Sources**:
     - National EMS Information System (NEMSIS), 2018–2022  
-    - **U.S. Census Bureau — 2018–2022 American Community Survey (ACS) 5-Year Estimates**
+    - U.S. Census Bureau — 2018–2022 American Community Survey (ACS) 5-Year Estimates**
     - **Full Dataset**: The complete research dataset contains ~6 million records.
     - **App Dataset**: For interactive performance, this dashboard uses a **100,000-record sample** to illustrate key trends.
     """)
@@ -283,11 +283,7 @@ elif page == "🏛️ US Census Data Merging":
 elif page == "📊 Visualization":
     st.title("📊 Key Visualizations")
     
-    st.warning("""
-    **Important Caveat:** The charts presented on this page are based on **raw incident counts**, not population-adjusted rates.
-    
-    This means the rankings and proportions are preliminary and are expected to **change significantly** once the population data is successfully merged. The current visualizations show *where* incidents are occurring in the dataset, while the final, normalized data will show *which groups are disproportionately affected*.
-    """)
+
 
     col1, col2 = st.columns(2)
 
@@ -335,5 +331,6 @@ elif page == "📊 Visualization":
                          title='Crash Counts by U.S. Census Division')
             fig_div.update_layout(xaxis_tickangle=35, showlegend=False)
             st.plotly_chart(fig_div, use_container_width=True)
+
 
 
